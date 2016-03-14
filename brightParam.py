@@ -4,3 +4,4 @@ METATAG = {
 			'DESC':{"name":"description"},
 			'KEY':{"name":"keywords"},
 }
+LOGFILE = 'log'

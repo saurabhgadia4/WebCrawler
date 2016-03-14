@@ -1,7 +1,11 @@
 from optparse import OptionParser
+import logging
+import sys
+import urllib2
 import brightParam as param
 import brightPage
-import urllib2
+import brightUtil as util
+
 
 class Fetcher:
     def __init__(self, url, headers={}):
@@ -24,29 +28,54 @@ class Fetcher:
         content = ''
         if handle:
             try:
-                content = unicode(handle.open(req).read(), "utf-8",
-                                errors="replace")
+                content = handle.open(req).read()
             except urllib2.HTTPError, error:
-                print 'Error: %s -> %s' % (error, self.url)
+                print '%s: %s' % (error, self.url)
+                logging.debug("Error:%s:%s",e, self.url)
             except urllib2.URLError, error:
-                print 'Error: %s -> %s' % (error, self.url)
+                print 'URL Error: %s: %s' % (error, self.url)
+                logging.debug("Error:%s:%s",error,self.url)
+            except Exception as e:
+                print 'Error: %s: %s' % (e)
+                logging.debug("Error:%s",e)
         return content
 
 
 if __name__=="__main__":
+    
     parser = OptionParser()
-    parser.add_option("-i", "--ip",action="store", type="string", dest="input", help="specify input link to crawl")
+    parser.add_option("-i", "--ip",action="store", type="string", dest="input", help="specify input url to crawl")
+    parser.add_option("-p", "--pc",action="store", type="string", dest="phraseCnt", help="specify top summary sentences count")
+    parser.add_option("-n", "--kn",action="store", type="string", dest="keyCnt", help="specify top keywords count")
     (options, args) = parser.parse_args()
     if options.input==None:
         print 'Program needs url as argument'
         print 'try --help for more option'
         exit()
+    if options.keyCnt==None:
+        keyCnt = 6
+    if options.phraseCnt==None:
+        phraseCnt = 5
+    logFile = util.getTime(param.LOGFILE)
+    logging.basicConfig(filename=logFile,level=logging.DEBUG, format='%(asctime)s %(levelname)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
     url = options.input
-    fobj = Fetcher(url, headers={"User-Agent":param.USER_AGENT})
-    content = fobj.fetch()
-    page = brightPage.Page(url, content)
-    page.getKeywords()
-    
+    logging.info("Request Url: %s",url)
+    try:
+        fobj = Fetcher(url, headers={"User-Agent":param.USER_AGENT})
+        content = fobj.fetch()
+        if not content:
+            exit()
+        page = brightPage.Page(url, content, phraseCnt, keyCnt)
+        phrases = page.get_key_phrases()
+        print 'Summary:-'
+        for i in range(phraseCnt):
+            print '[%d] %r:' % (i+1,phrases[i])
+        keywords = page.getKeywords()
+        print '\nkeywords: ',keywords
+    except Exception as e:
+        print 'Error while fetching keywords - check log file:',logFile
+        logging.debug("Cannot Fetch Keywords:%s",e)
+        logging.exception(e)
 
 
 

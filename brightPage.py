@@ -6,13 +6,17 @@ import brightParam as param
 import brightUtil as util
 
 class Page:
-    def __init__(self, url, content):
+    def __init__(self, url, content, topPhrases=10, topKeywords=5):
         self.content = content
         self.pageObj = None
         self.outLink = []
         self.metaKey = ''
         self.title = ''
         self.metaDesc = ''
+        self.keyPhrases = []
+        self.keywords = []
+        self.topPhrasesCnt = topPhrases
+        self.topKeyCount = topKeywords
         self.__getPageObject()
 
     def __fill_details(self):
@@ -22,34 +26,39 @@ class Page:
             obj = self.pageObj.findAll(attrs=param.METATAG['DESC'])
             if obj:
                 self.metaDesc = obj[0]['content']
+                if self.metaDesc:
+                    self.keyPhrases.append(self.metaDesc)
         except KeyError:
-            pass
+            logging.info("meta description missing")
         
         #extracting keywords
         try:
             obj = self.pageObj.findAll(attrs=param.METATAG['KEY'])
             if obj:
-                self.metaDesc = obj[0]['content']
+                self.metaKey = obj[0]['content']
+                if self.metaKey:
+                    self.keyPhrases.append(self.metaKey)
         except KeyError:
-            pass
+            logging.info("meta keywords missing")
 
         try:
             self.title = self.pageObj.title.text
+            if self.title:
+                self.keyPhrases.append(self.title)
         except Exception:
-            pass
-
-
+            logging.info("url title missing")
 
     def __getPageObject(self):
         try:
             self.pageObj = BeautifulSoup(self.content, "lxml")
             self.__fill_details()
         except Exception as e:
-            print 'Cannot create beatifulsoup object:',e
+            logging.debug('Cannot create beatifulsoup object:%s',e)
+            raise
 
     def getOutLink(self):
         for link in self.pageObj.find_all('a'):
-            print link.contents
+            self.outlink.append(link.contents)
 
     def getText(self):
         if not self.pageObj:
@@ -66,18 +75,14 @@ class Page:
     def _cleanSent(self, sent):
         clean = []
         for i in range(len(sent)):
-
-            rawText = re.sub('[%s]' % string.punctuation,'',sent[i])
+            rawText = util.removePunctuation(sent[i])
             rawText = re.sub('\d+','',sent[i])
-
             rawText = util.removeStopWords(rawText, param.STOPWORDS)
             clean.append(rawText)
         return clean
 
     def get_score(self, text):
         sentences = self._getSentences(text)
-        for s in sentences:
-            print s
         slen = len(sentences)
         score = [[0 for x in range(slen)] for x in range(slen)]
         
@@ -94,30 +99,47 @@ class Page:
                 j+=1
         return sentences, score
 
-    def get_top_match_sent(self, text, count=1):
+    def __extract_meta_tags(self):
+        tags = []
+        tags.extend(util.get_tags([self.metaKey]))
+        tags.extend(util.get_tags([self.metaDesc]))
+        tags.extend(util.get_tags([self.title]))
+        return tags
+
+    def get_key_phrases(self, count=0):
+        if self.pageObj:
+            text = self.getText()
+            text = text.lower()
+            text = util.removeStopWords(text, param.STOPWORDS)
         sent, score = self.get_score(text)
         slen = len(sent)
         score_dict = {}
+        nxt_count = 0
+        if not count:
+            count = self.topPhrasesCnt
 
         for i in range(slen):
             score_dict[sum(score[i])] = i
 
         top_sent = sorted(score_dict.keys(), reverse=True)
 
+        self.keywords.extend(self.__extract_meta_tags())
         for t in top_sent:
-            print 'sent:', sent[score_dict[t]], ' score: ',t
+            #print 'sent:', sent[score_dict[t]], ' score: ',t
+            self.keyPhrases.append(sent[score_dict[t]])
+            nxt_count+=1
+            if nxt_count==count:
+                break
+        return self.keyPhrases
 
-        print 'Page Details:'
-        print 'title:',self.title
-        print 'Desc:',self.metaDesc
-        print 'keywords:',self.metaKey
-
-
-
-    def getKeywords(self):
-        text = ''
-        if self.pageObj:
-            text = self.getText()
-            text = util.removeStopWords(text, param.STOPWORDS)
-            self.get_top_match_sent(text)
-        
+    def getKeywords(self, count=0):
+        keyPhrases = self.get_key_phrases()
+        self.keywords = util.get_tags(keyPhrases, self.keywords)
+        keywords = []
+        i = 0
+        if not count:
+            count = self.topKeyCount
+        while i<count and i<len(self.keywords):
+            keywords.append(self.keywords[i][0])
+            i+=1
+        return keywords        
