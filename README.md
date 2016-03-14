@@ -70,6 +70,7 @@ Further Algorithmic Enhancement:
 2. We can also create the score matrix based on heading, location of text, images in the webpage
 3. We can roughly categorize the web page based on URL domain.
 4. We can create the Tree Rank graph and induce results from it.
+5. We can used supervised machine learning algorithms to get more probabilistic score model from the learning.
 
 
 Results:

@@ -24,6 +24,8 @@ class Fetcher:
 
 
     def fetch(self):
+        ''' Uses requests package to get the webpage content. Returns the content.
+        '''
         req, handle = self.__request()
         content = ''
         if handle:
@@ -43,6 +45,7 @@ class Fetcher:
 
 if __name__=="__main__":
     
+    #checking the command line arguments
     parser = OptionParser()
     parser.add_option("-i", "--ip",action="store", type="string", dest="input", help="specify input url to crawl")
     parser.add_option("-p", "--pc",action="store", type="string", dest="phraseCnt", help="specify top summary sentences count")
@@ -56,15 +59,22 @@ if __name__=="__main__":
         keyCnt = 6
     if options.phraseCnt==None:
         phraseCnt = 5
+
+    #creating the log file
     logFile = util.getTime(param.LOGFILE)
     logging.basicConfig(filename=logFile,level=logging.DEBUG, format='%(asctime)s %(levelname)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
     url = options.input
     logging.info("Request Url: %s",url)
+
+
     try:
+        #fetches the content of the requested url.
         fobj = Fetcher(url, headers={"User-Agent":param.USER_AGENT})
         content = fobj.fetch()
         if not content:
             exit()
+
+        #Creates the page object and passes the content for keyword density analysis
         page = brightPage.Page(url, content, phraseCnt, keyCnt)
         phrases = page.get_key_phrases()
         print 'Summary:-'
