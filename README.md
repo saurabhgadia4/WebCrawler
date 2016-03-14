@@ -1,12 +1,75 @@
-# brightedge
+# Word Density Analyser
+This program will provide with summary of topmost sentences and topmost keywords present in the page for a given url.
 
-1. Create Density Content Analyser
+Usage:
+	input:-
+		$: python brightCrawler -i <url>
+		For commandline argument help:
+		$: python brightCrawler --help
 
-Packages:
-1. BeautifulSoup4
-2. urllib
-3. HtmlParser
+	output:-
+		<summary>
+		<keywords>
 
+
+Dependencies:
+	Language: Python
+	
+	Version:'2.7.6 (default, Jun 22 2015, 17:58:13) \n[GCC 4.8.2]'
+
+	External Packages:
+		1. BeautifulSoup4
+			Installation:
+				$: sudo pip install beautifulsoup4
+			Used For:
+				1. parsing html document.
+		2. Nltk
+			Installation:
+				$: sudo pip install nltk
+				$: then download nltk book for corpus and POS support
+			Used For:
+				1. extracting stopwords from the webpage
+				2. Part of Speech(POS) Tagging of top sentences to extract top keywords
+
+ALL Files:
+	1. README.md
+	2. brightCrawler.py - extracts the content of webpage and pass it to Page module for keyword extraction
+	3. brightPage.py - extracts top keywords and phrases for a given page
+	4. brightUtil.py - supportive function
+	5. brightParam.py - constant parameters file
+
+
+
+Program Flow and Algorithm:
+
+1. After passing the url to the program, it fetches the page using requests package and transfers the content to Page module.
+
+2. Algorithm for extracting top sentences and keywords:-
+   a. split all stopwords from the text
+   b. divide the text into sentences.
+   c. Remove Punctuation marks
+   d. When meta tags attributes like: description, keywords, title are present, then I am considering these phrases into my candidate list of top extracted sentences because most of the time it conveys accurate keywords and summary about the text.
+
+   Scoring function of sentences:-
+   e. Now for all the text sentences(N), I create a matrix of sentences (N*N)(symmetric). 
+   f. To calculate the score of pair of sentences, I take the intersection of words of two sentences and return the normalize amount of intersection count. eg. float(len(set_1.intersection(set_2)))/((len(set_1)+len(set_2))/2)
+   g. I also tried to implement the TextRank algorithm and bigram pair matching, but the result were not that convincing. May be I will require more time to further dig into these methods and find the missing link.
+   h. After getting our score matrix(N*N), each sentence score is just the sum of its score against all other sentences. This way we are imparting context logic into our algorithm.
+   i. Now we select the top K score sentences (k can be adjusted) and add the metatag sentences as well to this candidate list.
+   j. Now we tokenize the sentences and calculate the Part of Speech tags (NN, JJ, NNP) which are configurable.
+   h. Now we calculate the unique word count and return the keywords based on non-increasing word count of extracted keywords from POS tagger.
+
+Notes: 
+	1. I have also used the logging module in the program. So if the program does not outputs any result just have a look at the log file with name 'log-*.log' which matches with the execution time.
+
+	2. For each execution new log will be created with the name matching the time of execution.
+	3. We can easily extend this logging module to make it rolling based on size of log.
+
+Further Algorithmic Enhancement:
+1. We can take into account the outlinks webpage data to infer the keywords( Naive Bayes Method)
+2. We can also create the score matrix based on heading, location of text, images in the webpage
+3. We can roughly categorize the web page based on URL domain.
+4. We can create the Tree Rank graph and induce results from it.
 
 
 Results:
